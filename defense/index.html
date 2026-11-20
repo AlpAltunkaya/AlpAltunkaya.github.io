@@ -14,29 +14,38 @@
   --cell:#eceae3; --cell-hover:#dedbd1; --accent:#245e5a; --accent-ink:#ffffff; --accent-soft:#d8e8e5;
   --sug:#a9c7c2; --good:#245e5a; --warn:#9a6a12; --danger:#a33b2b;
   --shadow:0 1px 2px rgba(20,30,28,.06),0 4px 16px rgba(20,30,28,.05);
+  --note-bg:#fff4dc; --note-ink:#5a430f; --note-line:#f0dcaa;
   --radius:14px;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){
-  :root{
+  :root:not([data-theme="light"]){
     --bg:#121615; --surface:#1a201f; --ink:#e8ecea; --muted:#9aa6a2; --line:#2b3331;
     --cell:#252d2b; --cell-hover:#303a37; --accent:#5fb3a9; --accent-ink:#0d1413; --accent-soft:#1f3734;
     --sug:#3f6b65; --good:#5fb3a9; --warn:#d8a443; --danger:#e07a68;
     --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25);
+    --note-bg:#2d2614; --note-ink:#f0d9a2; --note-line:#4d4020;
     color-scheme:dark;
   }
 }
+:root[data-theme="dark"]{
+    --bg:#121615; --surface:#1a201f; --ink:#e8ecea; --muted:#9aa6a2; --line:#2b3331;
+    --cell:#252d2b; --cell-hover:#303a37; --accent:#5fb3a9; --accent-ink:#0d1413; --accent-soft:#1f3734;
+    --sug:#3f6b65; --good:#5fb3a9; --warn:#d8a443; --danger:#e07a68;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25);
+    --note-bg:#2d2614; --note-ink:#f0d9a2; --note-line:#4d4020;
+    color-scheme:dark;
+  }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;padding-bottom:96px}
-.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 header{padding:40px 0 8px}
 .kicker{margin:0 0 6px;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
 h1{margin:0 0 10px;font-size:clamp(1.7rem,4vw,2.3rem);line-height:1.15;letter-spacing:-.01em}
 .lede{margin:0;color:var(--muted);max-width:44rem}
 .lede strong{color:var(--ink);font-weight:600}
-.banner{margin:18px 0 0;padding:10px 14px;border-radius:10px;background:#fff4dc;color:#5a430f;font-size:.92rem;border:1px solid #f0dcaa}
-@media (prefers-color-scheme:dark){.banner{background:#2d2614;color:#f0d9a2;border-color:#4d4020}}
+.banner{margin:18px 0 0;padding:10px 14px;border-radius:10px;background:var(--note-bg);color:var(--note-ink);font-size:.92rem;border:1px solid var(--note-line)}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
 #who{margin-top:24px}
 #who form{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
@@ -508,8 +517,10 @@ function startAs(name) {
   saveBtn.disabled = !dirty();
   updateBadge();
 }
+var discardArmed = false;
 document.getElementById("changeName").addEventListener("click", function () {
-  if (dirty() && !window.confirm("Your changes are not saved yet. Switch name anyway?")) return;
+  if (dirty() && !discardArmed) { discardArmed = true; setStatus("Your changes are not saved yet. Tap Change again to discard them.", "err"); return; }
+  discardArmed = false;
   me = {name: "", days: blankDays(), note: ""}; saved = "";
   document.getElementById("nameForm").hidden = false;
   document.getElementById("whoOn").hidden = true;
