@@ -16,6 +16,7 @@
   --band:#0b4a8b; --band-ink:#fff; --band-soft:#d3e3f4;
   --bg:#fff; --field:#f1f4f8; --ink:#14202b; --muted:#506070;
   --accent:#0b57a4; --accent-ink:#fff; --danger:#a32d20; --ok:#17663a;
+  --o1:#86b6ef; --o2:#3987e5; --o3:#1c5cab; --o4:#0d366b; --all:#eb6834;   /* overlap: four steps, then everyone */
   --edge:#7b8794; --hour:rgb(20 32 43 / .38); --quarter:rgb(20 32 43 / .12); --on-line:rgb(255 255 255 / .28);
   --radius:6px; --left:150px; --mid:268px;
   color-scheme:light dark;
@@ -25,6 +26,7 @@
     --band:#102c49; --band-ink:#f2f6fa; --band-soft:#b9cbe0;
     --bg:#10161d; --field:#1a232d; --ink:#e8eef4; --muted:#a2b0bf;
     --accent:#78b4f0; --accent-ink:#07182a; --danger:#f09a8c; --ok:#86d3a4;
+    --o1:#184f95; --o2:#3987e5; --o3:#86b6ef; --o4:#cde2fb; --all:#d95926;
     --edge:#7f8e9e; --hour:rgb(232 238 244 / .4); --quarter:rgb(232 238 244 / .12); --on-line:rgb(7 24 42 / .22);
   }
 }
@@ -92,7 +94,7 @@ h1{margin:0 0 6px;max-width:23em;font-size:1.5rem;line-height:1.2;text-wrap:bala
 }
 
 /* the optional note */
-.note{margin:12px 0 28px;max-width:36rem}
+.note{margin:12px 0 8px;max-width:36rem}
 .note summary{display:list-item;width:fit-content;padding:10px 0;color:var(--accent);font-weight:600;cursor:pointer}
 .note textarea{display:block;width:100%;min-height:88px;padding:10px 12px;border:1px solid var(--edge);border-radius:var(--radius);background:var(--bg);caret-color:var(--accent);resize:vertical}
 
@@ -100,20 +102,29 @@ h1{margin:0 0 6px;max-width:23em;font-size:1.5rem;line-height:1.2;text-wrap:bala
 .everyone{background:var(--field);padding:24px 0 calc(96px + env(safe-area-inset-bottom,0px))}
 .everyone h2{margin:0 0 4px;font-size:1.25rem;line-height:1.2}
 .everyone p{margin:0;overflow-wrap:anywhere}
-.everyone .rule,.fine{color:var(--muted)}
-.everyone .answered{margin-top:12px;font-weight:600}
+.everyone .rule,.fine,.key{color:var(--muted)}
+.everyone .answered{margin-top:20px;font-weight:600}
+.everyone .fits-title{margin-top:12px;font-weight:600}
 .fits{margin:8px 0 4px;padding:0;list-style:none}
 .fits li{margin:4px 0}
 .everyone .day{grid-template-areas:"head detail track"}
 .everyone .slots{background:var(--bg)}
-.run{min-width:0;height:100%;padding:0;border:0;border-left:1px solid var(--field);border-radius:0;background:color-mix(in srgb,var(--accent) var(--mix),var(--bg));overflow:hidden;font-size:.875rem;font-weight:600}
-.run.enough{color:var(--accent-ink);font-weight:700}
+.run{min-width:0;height:100%;padding:0;border:0;border-left:1px solid var(--field);border-radius:0;background:var(--bg);overflow:hidden}
+[data-level="1"]{background:var(--o1)}
+[data-level="2"]{background:var(--o2)}
+[data-level="3"]{background:var(--o3)}
+[data-level="4"]{background:var(--o4)}
+[data-level="all"]{background:var(--all)}
+.everyone .key{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;margin:12px 0 4px;font-size:.8125rem}
+.key>span{display:inline-flex;align-items:center;gap:4px}
+.key i{flex:none;width:22px;height:16px}
 .run.split{border-left-width:3px}
-.run.sel{outline:3px solid var(--ink);outline-offset:-3px}
+.run.sel{outline:3px solid var(--ink);outline-offset:-3px;box-shadow:inset 0 0 0 5px var(--bg)}
 .detail{grid-area:detail;font-size:.8125rem;overflow-wrap:anywhere}
 .notes{margin-top:16px}
 .notes p{margin-top:6px}
-.fine{padding-top:20px;font-size:.8125rem}
+.fine{margin:0 0 20px;font-size:.8125rem}
+main:not(.shared){padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 
 /* save bar */
 #mineDays[inert]{opacity:.5}
@@ -159,7 +170,8 @@ h1{margin:0 0 6px;max-width:23em;font-size:1.5rem;line-height:1.2;text-wrap:bala
   .picks{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (forced-colors:active){
-  .s.on,.pick[aria-pressed=true],.run.enough{forced-color-adjust:none;background:Highlight;color:HighlightText}
+  .s.on,.pick[aria-pressed=true]{forced-color-adjust:none;background:Highlight;color:HighlightText}
+  [data-level]{forced-color-adjust:none}
 }
 </style>
 </head>
@@ -189,17 +201,19 @@ h1{margin:0 0 6px;max-width:23em;font-size:1.5rem;line-height:1.2;text-wrap:bala
       <label class="sr" for="noteInput">Note</label>
       <textarea id="noteInput" maxlength="500"></textarea>
     </details>
+    <p class="fine">Anyone with this link can see the answers.</p>
   </section>
 
-  <section class="everyone" aria-labelledby="allTitle">
+  <section class="everyone" id="everyone" aria-labelledby="allTitle" hidden>
     <div class="wrap">
       <h2 id="allTitle">Everyone’s times</h2>
-      <p class="rule">At least 4 of the 5 examiners are needed.</p>
-      <p class="answered" id="answered">Loading answers…</p>
+      <p class="fits-title" id="fitsTitle">Everyone who answered can attend:</p>
       <ul class="fits" id="fits"></ul>
+      <p class="answered" id="answered">Loading answers…</p>
+      <p class="rule">At least 4 of the 5 examiners are needed.</p>
+      <p class="key" id="key"></p>
       <div id="allDays"></div>
       <div class="notes" id="notes"></div>
-      <p class="fine">Anyone with this link can see the answers.</p>
     </div>
   </section>
 </main>
@@ -232,6 +246,7 @@ var PICKS = [                                          /* whole day, then the su
   {text:"14 to 16", a:24, b:32}
 ];
 var EXAMINERS = 5, NEED = 4;                           /* at least 4 of the 5 are needed */
+var STEPS = 4;                                         /* colour steps below everyone */
 var MIN_FIT = 8;                                       /* listed common times last 2 hours, like the suggested ones */
 var POLL_MS = 60000, TIMEOUT_MS = 45000;
 var SCROLL_MS = 150;                                   /* a tap this soon after scrolling only stops the scroll */
@@ -248,6 +263,7 @@ var entries = [];              /* everyone's answers from the store */
 var loaded = false;            /* until true, nothing is marked or saved, so no saved answer is overwritten */
 var storeBase = baseline;      /* the stored answer this tab started from. The store may reformat a note. */
 var lastSent = null, dragging = false, swallow = false, lastScroll = 0;
+var savedHere = false;         /* the person at the page has a saved answer, so everyone's times show */
 var saving = false, saveSeq = 0, shownSig = "", selected = null, fixAction = null;
 
 function blankDays() { var o = {}; DAYS.forEach(function (d) { o[d.id] = new Array(N).fill(0); }); return o; }
@@ -324,7 +340,7 @@ function refresh() {
     var first = !loaded;
     entries = normalize(list); loaded = true;
     $("mineDays").inert = saving;
-    renderAll();
+    renderAll(); showEveryone();
     if (me.name && !saving && !dragging && !dirty() && key(nameInput.value) === key(me.name) && findEntry(me.name) && storedAnswer(me.name) !== storeBase) {
       adopt(me.name, findEntry(me.name));
       say("Your saved times were updated.");
@@ -357,6 +373,7 @@ function adopt(name, found) {
   if (found) DAYS.forEach(function (d) { me.days[d.id] = found.days[d.id].slice(); });
   baseline = storeBase = answerOf(me);
   lastSent = null;
+  savedHere = !!found; showEveryone();
   noteInput.value = me.note; $("noteBox").open = !!me.note;
   paintMine();
   say(found ? "Your saved times are loaded." : "");
@@ -550,20 +567,35 @@ function attachKeys(track, id) {
 }
 
 /* ---------- everyone ---------- */
-/* Stretches where the same NEED people or more can stay from start to end. */
+/* Hidden until this person has saved. Returns true when it has just opened. */
+function showEveryone() {
+  var box = $("everyone"), show = savedHere && !!findEntry(me.name), opened = show && box.hidden;
+  box.hidden = !show;
+  box.parentNode.classList.toggle("shared", show);
+  return opened;
+}
+/* Stretches of MIN_FIT or longer where everyone who answered can attend. */
 function commonTimes(list, id) {
-  var found = [];
-  for (var a = 0; a < N; a++) {
-    var who = list.filter(function (e) { return e.days[id][a]; }), b = a + 1;
-    while (who.length >= NEED) {
-      var next = b < N ? who.filter(function (e) { return e.days[id][b]; }) : [];
-      if (next.length < who.length) found.push({a: a, b: b, k: who.length});
-      who = next; b++;
-    }
+  var found = [], s = -1;
+  for (var i = 0; i <= N; i++) {
+    var on = i < N && list.length > 0 && list.every(function (e) { return e.days[id][i]; });
+    if (on && s < 0) s = i;
+    if (!on && s >= 0) { if (i - s >= MIN_FIT) found.push({a: s, b: i}); s = -1; }
   }
-  return found.filter(function (f) {
-    return f.b - f.a >= MIN_FIT && !found.some(function (g) { return g !== f && g.a <= f.a && g.b >= f.b && g.k >= f.k; });
-  });
+  return found;
+}
+function levelOf(k, n) { return !k ? "" : k === n ? "all" : String(Math.min(k, STEPS)); }
+function drawKey(n) {
+  var box = $("key"), steps = Math.min(n - 1, STEPS), part = el("span"), i;
+  box.textContent = "";
+  if (!n) return;
+  if (steps > 1) part.appendChild(el("span", {text: "Fewer"}));
+  for (i = 1; i <= steps; i++) part.appendChild(el("i", {"data-level": i, "aria-hidden": "true"}));
+  if (steps > 0) {
+    part.appendChild(el("span", {text: steps > 1 ? "More" : "Some"}));
+    box.appendChild(part);
+  }
+  box.appendChild(el("span", {}, [el("i", {"data-level": "all", "aria-hidden": "true"}), el("span", {text: "Everyone who answered"})]));
 }
 function renderAll() {
   var sig = JSON.stringify(entries);
@@ -575,16 +607,17 @@ function renderAll() {
   var fits = $("fits"); fits.textContent = "";
   var nameList = $("names"); nameList.textContent = "";
   entries.forEach(function (e) { nameList.appendChild(el("option", {value: e.name})); });
+  var listed = 0;
   if (n > EXAMINERS) {
     fits.appendChild(el("li", {text: "More than 5 names answered, so check for a double entry."}));
-  } else if (n >= NEED) {
+  } else if (n) {
     DAYS.forEach(function (d) {
-      commonTimes(entries, d.id).forEach(function (f) {
-        fits.appendChild(el("li", {}, [el("strong", {text: d.label + ", " + span(f.a, f.b)}), document.createTextNode(": " + (f.k === n ? "all " + n : f.k + " of " + n) + " can attend")]));
-      });
+      commonTimes(entries, d.id).forEach(function (f) { fits.appendChild(el("li", {text: d.label + ", " + span(f.a, f.b)})); listed++; });
     });
-    if (!fits.children.length) fits.appendChild(el("li", {text: "No 2 hours work for 4 people yet."}));
+    if (!listed) fits.appendChild(el("li", {text: "No 2 hours work for everyone who answered so far."}));
   }
+  $("fitsTitle").hidden = !listed;
+  drawKey(n);
 
   var all = $("allDays"); all.textContent = "";
   if (n) {
@@ -607,9 +640,8 @@ function overlapRow(d, n) {
       while (b < end && whoAt(d.id, b) === sigAt) b++;
       var k = entries.filter(function (e) { return e.days[d.id][i]; }).length;
       var split = k >= NEED && i > h * HALF && entries.filter(function (e) { return e.days[d.id][i - 1]; }).length >= NEED;
-      var run = el("button", {type: "button", cls: "run" + (k >= NEED ? " enough" : "") + (split ? " split" : ""), "data-d": d.id, "data-a": i, "data-b": b, "aria-label": d.long + ", " + span(i, b) + ": " + k + " of " + n + " can attend", text: k ? String(k) : ""});
+      var run = el("button", {type: "button", cls: "run" + (split ? " split" : ""), "data-level": levelOf(k, n), "data-d": d.id, "data-a": i, "data-b": b, "aria-label": d.long + ", " + span(i, b) + ": " + k + " of " + n + " can attend"});
       run.style.flex = (b - i) + " 1 0px";
-      run.style.setProperty("--mix", (k >= NEED ? 100 : k * 13) + "%");
       if (!k) run.tabIndex = -1;
       box.appendChild(run); i = b;
     }
@@ -671,7 +703,10 @@ saveBtn.addEventListener("click", function () {
         return;
       }
       baseline = snap; storeBase = answerOf(got);
+      savedHere = true;
+      var opened = showEveryone();
       say("Saved. To change it, use the same name.", "ok");
+      if (opened) $("everyone").scrollIntoView({block: "start"});
     });
   }).catch(function () {
     say("Could not save. Check your connection and save again.", "err");
