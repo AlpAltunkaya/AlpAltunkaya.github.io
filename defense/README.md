@@ -18,6 +18,9 @@ see everyone's overlap.
   The rows show no numbers. A tap on a block names who can attend. With more than
   5 names it lists no time and asks for a check for a double entry.
 - The page is always light, also on a device in dark mode.
+- On opening, a ghost pointer shows the hold and drag once on the first day (about
+  2.5 seconds). It marks nothing, ends at the first input, and stays off when the
+  device asks for reduced motion.
 - Hiding the section is not access control: the answer store is readable by anyone
   with the link, and the name field offers the saved names.
 - The same name loads and changes an earlier answer. Before a save the page reads the

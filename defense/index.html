@@ -17,7 +17,7 @@
   --accent:#0b57a4; --accent-ink:#fff; --danger:#a32d20; --ok:#17663a;
   --o1:#86b6ef; --o2:#3483e0; --o3:#16509c; --o4:#06234b; --all:#eb6834;   /* overlap: four steps, then everyone */
   --edge:#7b8794; --hour:rgb(20 32 43 / .38); --quarter:rgb(20 32 43 / .12); --on-line:rgb(255 255 255 / .28);
-  --radius:6px; --left:150px; --mid:268px;
+  --radius:6px; --left:150px; --mid:300px;
   color-scheme:only light;   /* light on every device, also when the device is dark */
 }
 *{box-sizing:border-box}
@@ -49,13 +49,13 @@ h1{margin:0 0 6px;max-width:23em;font-size:1.5rem;line-height:1.2;text-wrap:bala
 .hint{margin:20px 0 10px;font-weight:600;text-wrap:balance}
 .cols,.day{display:grid;grid-template-columns:var(--left) var(--mid) minmax(0,1fr);column-gap:16px}
 .cols{align-items:end;padding-bottom:4px}
-.cols .labels{grid-column:2;display:grid;grid-template-columns:repeat(4,64px);gap:4px;text-align:center;font-size:.8125rem;color:var(--muted);line-height:1.15}
+.cols .labels{grid-column:2;display:grid;grid-template-columns:repeat(4,72px);gap:4px;text-align:center;font-size:1rem;font-weight:700;color:var(--ink);line-height:1.25;white-space:nowrap}
 .cols .ticks-row{grid-column:3;display:flex;min-width:0}
 .cols .ticks-row>*{flex:1;min-width:0}
 .day{grid-template-areas:"head picks track" "sum picks track";grid-template-rows:auto 1fr;align-items:start;padding:8px 0}
 .date{grid-area:head;margin:0;font-size:1rem;line-height:1.25}
 .sum{grid-area:sum;margin:2px 0 0;min-height:1.2em;font-size:.8125rem;line-height:1.2;color:var(--accent);font-weight:600}
-.picks{grid-area:picks;display:grid;grid-template-columns:repeat(4,64px);gap:4px}
+.picks{grid-area:picks;display:grid;grid-template-columns:repeat(4,72px);gap:4px}
 .pick{min-height:44px;padding:0;border:0;border-radius:var(--radius);background:var(--field);display:flex;align-items:center;justify-content:center;gap:6px}
 .pick svg{flex:none;width:22px;height:22px;border:2px solid var(--edge);border-radius:4px;background:var(--bg);color:transparent}
 .pick[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
@@ -78,6 +78,11 @@ h1{margin:0 0 6px;max-width:23em;font-size:1.5rem;line-height:1.2;text-wrap:bala
 .s.on{background:var(--accent);border-left-color:var(--on-line)}
 .s:focus-visible{position:relative;z-index:1;outline:3px solid var(--ink);outline-offset:1px}
 .readout{position:absolute;z-index:2;transform:translate(-50%,calc(-100% - 6px));padding:5px 10px;border-radius:var(--radius);background:var(--ink);color:var(--bg);font-weight:700;white-space:nowrap;pointer-events:none}
+/* the demo on opening: drawn over the first day, it marks nothing and takes no input */
+.ghost{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0}
+.ghost .band{position:absolute;background:var(--accent);opacity:.25}
+.ghost .press{position:absolute;width:28px;height:28px;margin:-14px 0 0 -14px;border:2px solid var(--accent);border-radius:50%;background:rgb(255 255 255 / .45)}
+.ghost svg{position:absolute;width:30px;height:32px;fill:var(--ink);fill-opacity:.78;stroke:var(--bg);stroke-width:1.5;stroke-linejoin:round}
 @media (hover:hover) and (pointer:fine){
   .mine .s:not(.on):hover{background:var(--quarter)}
   .pick[aria-pressed=false]:hover{background:var(--quarter)}
@@ -133,7 +138,7 @@ main:not(.shared){padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
   .cols{display:none}
   .day{grid-template-columns:150px minmax(0,1fr);grid-template-areas:"head picks" "track track" "sum sum";grid-template-rows:auto;row-gap:6px;padding:14px 0}
   .picks{grid-template-columns:repeat(4,minmax(0,1fr))}
-  .pick{padding:4px;font-size:.875rem;line-height:1.15}
+  .pick{padding:4px;font-size:1rem;font-weight:700;line-height:1.15}
   .pick svg{width:18px;height:18px}
   .pick .t{position:static;width:auto;height:auto;overflow:visible;clip-path:none;white-space:normal}
   .day .ticks{display:block}
@@ -150,14 +155,17 @@ main:not(.shared){padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
   .half:first-child .ticks span.last{display:block}
   .half+.half .ticks span.first{transform:none}
   .slots{border-right:1px solid var(--hour)}
-  .pick{padding:2px;gap:0;font-size:.875rem}
+  .pick{padding:2px;gap:0;font-size:.9375rem}
   .pick svg{display:none}
-  .pick[aria-pressed=true]{font-weight:700}
   .pick[aria-pressed=true] svg{display:block;width:16px;height:16px;border:0;background:none;color:inherit}
   .save{padding:10px 18px}
 }
+@media (max-width:389px){
+  .pick{font-size:.875rem}   /* four in a line, also with the tick */
+}
 @media (max-width:359px){
   .picks{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pick{font-size:1rem}
 }
 @media (forced-colors:active){
   .s.on,.pick[aria-pressed=true]{forced-color-adjust:none;background:Highlight;color:HighlightText}
@@ -336,7 +344,7 @@ function refresh() {
       adopt(me.name, findEntry(me.name));
       say("Your saved times were updated.");
     }
-    if (first) { say(""); if (nameInput.value.trim() && document.activeElement !== nameInput) commitName(); }
+    if (first) { say(""); if (nameInput.value.trim() && document.activeElement !== nameInput) commitName(); demoSoon(); }
   }).catch(function () {
     if (loaded || seq !== saveSeq) return;
     $("answered").textContent = "Answers could not be loaded.";
@@ -673,6 +681,81 @@ function showSelected() {
 $("allDays").addEventListener("click", function (e) {
   var r = e.target.closest(".run");
   if (r) { selected = {d: r.dataset.d, i: +r.dataset.a}; showSelected(); }
+});
+
+/* ---------- demo on opening ---------- */
+/* Once per visit, a ghost pointer presses, holds and drags over 10:00 to 12:00 on the first day.
+   It only draws. It never touches the answer, and the first input ends it. */
+var DEMO_WAIT = 1000, DEMO_MS = 2500, DEMO_HOLD = 800, DEMO_DRAG_END = 2000, DEMO_MOVE_PX = 16;
+var demoState = "waiting", demoBox = null, demoTimer = 0, demoFrame = 0, demoFrom = null;
+var demoInputs = ["pointerdown", "touchstart", "wheel", "keydown", "input", "change", "scroll"];
+function demoStop() {
+  demoState = "over";
+  clearTimeout(demoTimer); cancelAnimationFrame(demoFrame);
+  if (demoBox) { demoBox.remove(); demoBox = null; }
+  demoInputs.forEach(function (t) { window.removeEventListener(t, demoStop, true); });
+  window.removeEventListener("pointermove", demoMoved, true);
+}
+/* a resting hand shakes a little, so only a real move of the mouse ends a running demo */
+function demoMoved(e) {
+  if (demoState !== "playing") return;
+  if (!demoFrom) demoFrom = {x: e.clientX, y: e.clientY};
+  else if (Math.abs(e.clientX - demoFrom.x) + Math.abs(e.clientY - demoFrom.y) > DEMO_MOVE_PX) demoStop();
+}
+function demoSoon() {
+  if (demoState !== "waiting") return;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { demoStop(); return; }
+  clearTimeout(demoTimer);
+  demoTimer = setTimeout(demoPlay, DEMO_WAIT);
+}
+function demoBuild() {
+  var touch = matchMedia("(pointer: coarse)").matches, ns = "http://www.w3.org/2000/svg";
+  var svg = document.createElementNS(ns, "svg"), path = document.createElementNS(ns, "path");
+  var tip = touch ? [11.5, 2.5] : [3, 2];   /* where the finger or the arrow points */
+  svg.setAttribute("viewBox", "0 0 30 32");
+  svg.setAttribute("data-kind", touch ? "finger" : "cursor");
+  svg.style.margin = -tip[1] + "px 0 0 " + -tip[0] + "px";
+  path.setAttribute("d", touch ? "M9 21V5a2.5 2.5 0 0 1 5 0v9l8 2.5a4 4 0 0 1 3 4l-1.5 9H12l-7-7.5a2.5 2.5 0 0 1 4-3z" : "M3 2v21l5.5-5 4 9 4-2-4-8.5H20z");
+  svg.appendChild(path);
+  demoBox = el("div", {cls: "ghost", "aria-hidden": "true"}, [el("div", {cls: "band"}), el("div", {cls: "press"}), el("div", {cls: "readout"}), svg]);
+  rows[DAYS[0].id].halves[0].closest(".track").appendChild(demoBox);
+}
+function demoPlay() {
+  if (demoState !== "waiting" || document.visibilityState !== "visible") return;
+  var r = rows[DAYS[0].id].halves[0].getBoundingClientRect();
+  if (r.top < 0 || r.bottom > document.querySelector(".bar").getBoundingClientRect().top) { demoStop(); return; }
+  demoState = "playing";
+  demoBuild();
+  var began = performance.now();
+  (function next() {
+    var t = performance.now() - began;
+    if (t >= DEMO_MS) { demoStop(); return; }
+    demoPaint(t);
+    demoFrame = requestAnimationFrame(next);
+  })();
+}
+function demoPaint(t) {
+  var row = rows[DAYS[0].id], p = PICKS[1], part = demoBox.children;
+  var box = demoBox.getBoundingClientRect(), line = row.halves[0].getBoundingClientRect();
+  var go = Math.max(0, Math.min(1, (t - DEMO_HOLD) / (DEMO_DRAG_END - DEMO_HOLD)));
+  go = go * go * (3 - 2 * go);   /* starts and ends softly */
+  var from = row.slots[p.a].getBoundingClientRect().left - box.left, to = row.slots[p.b - 1].getBoundingClientRect().right - box.left;
+  var x = from + (to - from) * go, top = line.top - box.top, y = top + line.height * .55, down = t >= 300 && t < DEMO_DRAG_END;
+  demoBox.style.opacity = Math.max(0, Math.min(1, t / 300, (DEMO_MS - t) / (DEMO_MS - DEMO_DRAG_END)));
+  part[0].style.left = from + "px"; part[0].style.width = x - from + "px";
+  part[0].style.top = top + "px"; part[0].style.height = line.height + "px";
+  part[1].style.left = x + "px"; part[1].style.top = y + "px"; part[1].style.visibility = down ? "visible" : "hidden";
+  part[2].style.visibility = t >= 300 ? "visible" : "hidden";
+  part[2].textContent = span(p.a, p.a + Math.max(1, Math.round((p.b - p.a) * go)));
+  var half = part[2].offsetWidth / 2;
+  part[2].style.left = Math.max(half, Math.min(box.width - half, x)) + "px"; part[2].style.top = top + "px";
+  part[3].style.left = x + "px"; part[3].style.top = y + "px";
+}
+demoInputs.forEach(function (t) { window.addEventListener(t, demoStop, {capture: true, passive: true}); });
+window.addEventListener("pointermove", demoMoved, {capture: true, passive: true});
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState !== "visible") { if (demoState === "playing") demoStop(); }
+  else if (loaded) demoSoon();
 });
 
 /* ---------- save ---------- */
