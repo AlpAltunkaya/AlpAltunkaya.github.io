@@ -17,7 +17,7 @@
   --accent:#0b57a4; --accent-ink:#fff; --danger:#a32d20; --ok:#17663a;
   --o1:#86b6ef; --o2:#3483e0; --o3:#16509c; --o4:#06234b; --all:#eb6834;   /* overlap: four steps, then everyone */
   --edge:#7b8794; --hour:rgb(20 32 43 / .38); --quarter:rgb(20 32 43 / .12); --on-line:rgb(255 255 255 / .28);
-  --radius:6px; --left:150px; --mid:300px;
+  --radius:6px; --left:150px; --mid:408px;
   color-scheme:only light;   /* light on every device, also when the device is dark */
 }
 *{box-sizing:border-box}
@@ -49,13 +49,14 @@ h1{margin:0 0 6px;max-width:23em;font-size:1.5rem;line-height:1.2;text-wrap:bala
 .hint{margin:20px 0 10px;font-weight:600;text-wrap:balance}
 .cols,.day{display:grid;grid-template-columns:var(--left) var(--mid) minmax(0,1fr);column-gap:16px}
 .cols{align-items:end;padding-bottom:4px}
-.cols .labels{grid-column:2;display:grid;grid-template-columns:repeat(4,72px);gap:4px;text-align:center;font-size:1rem;font-weight:700;color:var(--ink);line-height:1.25;white-space:nowrap}
+.cols .labels{grid-column:2;display:grid;grid-template-columns:repeat(4,72px) 104px;gap:4px;text-align:center;font-size:1rem;font-weight:700;color:var(--ink);line-height:1.25;white-space:nowrap}
 .cols .ticks-row{grid-column:3;display:flex;min-width:0}
 .cols .ticks-row>*{flex:1;min-width:0}
 .day{grid-template-areas:"head picks track" "sum picks track";grid-template-rows:auto 1fr;align-items:start;padding:8px 0}
 .date{grid-area:head;margin:0;font-size:1rem;line-height:1.25}
 .sum{grid-area:sum;margin:2px 0 0;min-height:1.2em;font-size:.8125rem;line-height:1.2;color:var(--accent);font-weight:600}
-.picks{grid-area:picks;display:grid;grid-template-columns:repeat(4,72px);gap:4px}
+.picks{grid-area:picks;display:grid;grid-template-columns:repeat(4,72px) 104px;gap:4px}
+.sum.no{color:var(--muted)}
 .pick{min-height:44px;padding:0;border:0;border-radius:var(--radius);background:var(--field);display:flex;align-items:center;justify-content:center;gap:6px}
 .pick svg{flex:none;width:22px;height:22px;border:2px solid var(--edge);border-radius:4px;background:var(--bg);color:transparent}
 .pick[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
@@ -133,10 +134,11 @@ main:not(.shared){padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .save:disabled{cursor:progress;opacity:.7}
 
 /* tablet and narrow laptop: the timeline gets its own line */
-@media (max-width:1099px){
+@media (max-width:1199px){
   .cols{display:none}
   .day{grid-template-columns:150px minmax(0,1fr);grid-template-areas:"head picks" "track track" "sum sum";grid-template-rows:auto;row-gap:6px;padding:14px 0}
   .picks{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .pick.no{grid-column:1/-1}   /* Can't attend gets its own line under the times */
   .pick{padding:4px;font-size:1rem;font-weight:700;line-height:1.15}
   .pick svg{width:18px;height:18px}
   .pick .t{position:static;width:auto;height:auto;overflow:visible;clip-path:none;white-space:normal}
@@ -271,8 +273,60 @@ function key(name) { return name.trim().replace(/\s+/g, " ").toLowerCase(); }
 function dec(s) { var a = new Array(N).fill(0); if (typeof s === "string") for (var i = 0; i < N && i < s.length; i++) a[i] = s.charAt(i) === "1" ? 1 : 0; return a; }
 function answerOf(p) { return JSON.stringify([DAYS.map(function (d) { return p.days[d.id].join(""); }), p.note.trim()]); }
 function storedAnswer(name) { return answerOf(findEntry(name) || {days: blankDays(), note: ""}); }
-function dirty() { return answerOf(me) !== baseline; }
-function findEntry(name) { var k = key(name); return entries.filter(function (e) { return key(e.name) === k; })[0] || null; }
+function dirty() { return answerOf(me) !== baseline || cantTouched; }
+function findEntry(name) { return nameMatch(entries, name); }
+/* A returning examiner is found again even when the name is typed a little differently:
+   case, spaces, punctuation, accents, umlaut spellings, titles, word order and small typos.
+   A name is only matched when exactly one saved name fits best. */
+var TITLES = /^(prof|professor|professorin|dr|med|rer|nat|phil|habil|pd|apl|dipl|ing|herr|frau|mr|mrs)$/;
+function nameTokens(name) {
+  var s = String(name).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+    .replace(/ß/g, "ss").replace(/ae/g, "a").replace(/oe/g, "o").replace(/ue/g, "u")
+    .replace(/[^a-z0-9]+/g, " ").trim();
+  return s ? s.split(" ").filter(function (t) { return !TITLES.test(t); }) : [];
+}
+function editDistance(a, b) {
+  var prev = [], cur, i, j;
+  for (j = 0; j <= b.length; j++) prev[j] = j;
+  for (i = 1; i <= a.length; i++) {
+    cur = [i];
+    for (j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+/* short words and initials must match exactly, words under 6 letters allow one typo, longer ones two */
+function typoCost(a, b) {
+  var n = Math.min(a.length, b.length), d = editDistance(a, b);
+  return d <= (n < 3 ? 0 : Math.max(a.length, b.length) < 6 ? 1 : 2) ? d : Infinity;
+}
+/* every word of the shorter name must match its own word of the longer one */
+function nameCost(a, b) {
+  if (!a.length || !b.length) return Infinity;
+  var whole = a.length === 1 || b.length === 1 ? typoCost(a.join(""), b.join("")) : Infinity;   /* "AnnaSchroeder" typed as one word */
+  if (a.length > b.length) { var t = a; a = b; b = t; }
+  var used = [], cost = 0, letters = 0;
+  for (var i = 0; i < a.length; i++) {
+    var best = Infinity, at = -1;
+    for (var j = 0; j < b.length; j++) if (!used[j]) { var c = typoCost(a[i], b[j]); if (c < best) { best = c; at = j; } }
+    if (at < 0 || best === Infinity) { cost = Infinity; break; }
+    used[at] = true; cost += best; letters += a[i].length;
+  }
+  if (letters < 3) cost = Infinity;
+  else cost += (b.length - a.length) * .5;
+  return Math.min(cost, whole);
+}
+function nameMatch(list, name) {
+  var k = key(name), exact = list.filter(function (e) { return key(e.name) === k; })[0];
+  if (exact) return exact;
+  var mine = nameTokens(name), best = null, low = Infinity, tie = false;
+  list.forEach(function (e) {
+    var c = nameCost(mine, nameTokens(e.name));
+    if (c < low) { low = c; best = e; tie = false; } else if (c === low && c < Infinity) tie = true;
+  });
+  return low < Infinity && !tie ? best : null;
+}
+function sameEntry(a, b) { var x = findEntry(a); return !!x && x === findEntry(b); }
 function rangeText(arr) {
   var out = [], s = -1;
   for (var i = 0; i <= N; i++) {
@@ -369,6 +423,9 @@ function askName() {
 function adopt(name, found) {
   me = {name: found ? found.name : name, days: blankDays(), note: found ? found.note : ""};
   if (found) DAYS.forEach(function (d) { me.days[d.id] = found.days[d.id].slice(); });
+  /* a saved answer shows each day without times as "Can't attend" */
+  DAYS.forEach(function (d) { cant[d.id] = !!found && !me.days[d.id].some(function (x) { return x; }); });
+  cantTouched = false;
   baseline = storeBase = answerOf(me);
   lastSent = null;
   savedHere = !!found; showEveryone();
@@ -385,7 +442,7 @@ function commitName() {
     return false;
   }
   if (!loaded) { retryLoad(); return false; }
-  if (me.name && key(v) === key(me.name)) {
+  if (me.name && (key(v) === key(me.name) || sameEntry(v, me.name))) {   /* the same person, maybe spelled a little differently */
     if (fixAction) changed();
     return true;
   }
@@ -422,8 +479,9 @@ noteInput.addEventListener("input", function () { me.note = noteInput.value; cha
 
 /* ---------- my times ---------- */
 var rows = {};   /* day id -> its elements */
+var cant = {}, cantTouched = false;   /* days marked "Can't attend". They save as days without times. */
 function buildMine() {
-  var labels = el("div", {cls: "labels"}, PICKS.map(function (p) { return el("span", {text: p.text}); }));
+  var labels = el("div", {cls: "labels"}, PICKS.map(function (p) { return el("span", {text: p.text}); }).concat([el("span", {text: "Can't attend"})]));
   $("mineDays").appendChild(el("div", {cls: "cols", "aria-hidden": "true"}, [labels, timeAxis()]));
   DAYS.forEach(function (d) {
     var row = {slots: [], picks: [], halves: []};
@@ -441,6 +499,15 @@ function buildMine() {
       });
       row.picks.push(b); picks.appendChild(b);
     });
+    row.no = el("button", {type: "button", cls: "pick no", "aria-pressed": "false", "aria-label": "Can't attend, " + d.long}, [checkMark(), el("span", {cls: "t", text: "Can't attend"})]);
+    row.no.addEventListener("click", function (e) {
+      if ((e.detail && swallow) || !ready()) return;
+      cant[d.id] = !cant[d.id];
+      if (cant[d.id]) me.days[d.id].fill(0);
+      cantTouched = true;
+      paintDay(d.id); changed();
+    });
+    picks.appendChild(row.no);
     var track = el("div", {cls: "track", role: "group", "aria-label": d.long + ". Arrow keys move, Space marks, Shift and an arrow marks a span."});
     for (var h = 0; h < 2; h++) {
       var box = el("div", {cls: "slots"});
@@ -464,7 +531,10 @@ function paintDay(id) {
   var arr = me.days[id], row = rows[id];
   row.slots.forEach(function (s, i) { s.classList.toggle("on", !!arr[i]); s.setAttribute("aria-pressed", arr[i] ? "true" : "false"); });
   row.picks.forEach(function (b, i) { b.setAttribute("aria-pressed", covers(arr, PICKS[i]) ? "true" : "false"); });
-  row.sum.textContent = rangeText(arr);
+  if (arr.some(function (x) { return x; })) cant[id] = false;   /* a marked time takes back "Can't attend" */
+  row.no.setAttribute("aria-pressed", cant[id] ? "true" : "false");
+  row.sum.textContent = cant[id] ? "Can't attend" : rangeText(arr);
+  row.sum.classList.toggle("no", !!cant[id]);
 }
 function paintMine() { DAYS.forEach(function (d) { paintDay(d.id); }); }
 
@@ -773,7 +843,7 @@ saveBtn.addEventListener("click", function () {
   if (saving || !ready()) return;
   if (!dirty()) {
     if (findEntry(me.name)) say("Your times are saved.", "ok");
-    else say("Mark a time, or add a note if none suit you.", "err");
+    else say("Mark a time, or press Can't attend.", "err");
     return;
   }
   var payload = {name: me.name, days: {}, note: me.note.trim()}, snap = answerOf(me);
@@ -800,7 +870,7 @@ saveBtn.addEventListener("click", function () {
         say("Your answer did not arrive. Save again.", "err");
         return;
       }
-      baseline = snap; storeBase = answerOf(got);
+      baseline = snap; storeBase = answerOf(got); cantTouched = false;
       savedHere = true;
       var opened = showEveryone();
       say("Saved. To change it, use the same name.", "ok");
@@ -820,7 +890,7 @@ window.addEventListener("beforeunload", function (e) { if (dirty()) { e.preventD
 /* a press that brings back a saved answer does nothing else, so it cannot switch a saved time off */
 $("mineDays").addEventListener("pointerdown", function () {
   var v = nameInput.value;
-  swallow = !!v.trim() && loaded && key(v) !== key(me.name) && !!findEntry(v);
+  swallow = !!v.trim() && loaded && key(v) !== key(me.name) && !!findEntry(v) && !sameEntry(v, me.name);
   if (swallow) commitName();
 }, true);
 window.addEventListener("scroll", function () { lastScroll = Date.now(); }, {passive: true});
