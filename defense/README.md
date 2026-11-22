@@ -10,8 +10,8 @@ see everyone's overlap.
   8:00 to 18:00 Munich time, one row per day. Tap "All day", 10 to 12, 13 to 15 or
   14 to 16, or drag along the row for exact times.
 - "Everyone's times" stays hidden until the person has saved, or has loaded a saved
-  answer by name. It lists first each time of 2 hours or more that everyone who
-  answered can attend (`MIN_FIT` in `index.html`). A colour row per day follows:
+  answer by name. It lists first every time, however short, that everyone who
+  answered can attend, one line per day. A colour row per day follows:
   four blue steps for 1, 2, 3 and 4 people, and orange for everyone who answered.
   The rows show no numbers. A tap on a block names who can attend. With more than
   5 names it lists no time and asks for a check for a double entry.

@@ -16,7 +16,7 @@
   --band:#0b4a8b; --band-ink:#fff; --band-soft:#d3e3f4;
   --bg:#fff; --field:#f1f4f8; --ink:#14202b; --muted:#506070;
   --accent:#0b57a4; --accent-ink:#fff; --danger:#a32d20; --ok:#17663a;
-  --o1:#86b6ef; --o2:#3987e5; --o3:#1c5cab; --o4:#0d366b; --all:#eb6834;   /* overlap: four steps, then everyone */
+  --o1:#86b6ef; --o2:#3483e0; --o3:#16509c; --o4:#06234b; --all:#eb6834;   /* overlap: four steps, then everyone */
   --edge:#7b8794; --hour:rgb(20 32 43 / .38); --quarter:rgb(20 32 43 / .12); --on-line:rgb(255 255 255 / .28);
   --radius:6px; --left:150px; --mid:268px;
   color-scheme:light dark;
@@ -247,7 +247,6 @@ var PICKS = [                                          /* whole day, then the su
 ];
 var EXAMINERS = 5, NEED = 4;                           /* at least 4 of the 5 are needed */
 var STEPS = 4;                                         /* colour steps below everyone */
-var MIN_FIT = 8;                                       /* listed common times last 2 hours, like the suggested ones */
 var POLL_MS = 60000, TIMEOUT_MS = 45000;
 var SCROLL_MS = 150;                                   /* a tap this soon after scrolling only stops the scroll */
 var SLIP_PX = 6;                                       /* finger movement that still counts as a tap */
@@ -574,15 +573,9 @@ function showEveryone() {
   box.parentNode.classList.toggle("shared", show);
   return opened;
 }
-/* Stretches of MIN_FIT or longer where everyone who answered can attend. */
+/* The day's slots where everyone who answered can attend, however short. */
 function commonTimes(list, id) {
-  var found = [], s = -1;
-  for (var i = 0; i <= N; i++) {
-    var on = i < N && list.length > 0 && list.every(function (e) { return e.days[id][i]; });
-    if (on && s < 0) s = i;
-    if (!on && s >= 0) { if (i - s >= MIN_FIT) found.push({a: s, b: i}); s = -1; }
-  }
-  return found;
+  return blankDays()[id].map(function (zero, i) { return list.length && list.every(function (e) { return e.days[id][i]; }) ? 1 : zero; });
 }
 function levelOf(k, n) { return !k ? "" : k === n ? "all" : String(Math.min(k, STEPS)); }
 function drawKey(n) {
@@ -612,9 +605,10 @@ function renderAll() {
     fits.appendChild(el("li", {text: "More than 5 names answered, so check for a double entry."}));
   } else if (n) {
     DAYS.forEach(function (d) {
-      commonTimes(entries, d.id).forEach(function (f) { fits.appendChild(el("li", {text: d.label + ", " + span(f.a, f.b)})); listed++; });
+      var times = rangeText(commonTimes(entries, d.id));
+      if (times) { fits.appendChild(el("li", {text: d.label + ": " + times})); listed++; }
     });
-    if (!listed) fits.appendChild(el("li", {text: "No 2 hours work for everyone who answered so far."}));
+    if (!listed) fits.appendChild(el("li", {text: "No time works for everyone who answered so far."}));
   }
   $("fitsTitle").hidden = !listed;
   drawKey(n);
