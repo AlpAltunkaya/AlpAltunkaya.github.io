@@ -11,10 +11,13 @@ see everyone's overlap.
   14 to 16, or drag along the row for exact times.
 - "Everyone's times" stays hidden until the person has saved, or has loaded a saved
   answer by name. It lists first every time, however short, that everyone who
-  answered can attend, one line per day. A colour row per day follows:
+  answered can attend, one line per day. Once five have answered, a second list gives
+  the times that exactly 4 of the 5 can attend. It repeats no time of the first list,
+  and starts a new time where the group of four changes. A colour row per day follows:
   four blue steps for 1, 2, 3 and 4 people, and orange for everyone who answered.
   The rows show no numbers. A tap on a block names who can attend. With more than
   5 names it lists no time and asks for a check for a double entry.
+- The page is always light, also on a device in dark mode.
 - Hiding the section is not access control: the answer store is readable by anyone
   with the link, and the name field offers the saved names.
 - The same name loads and changes an earlier answer. Before a save the page reads the

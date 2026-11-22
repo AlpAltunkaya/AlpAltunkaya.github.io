@@ -5,9 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="color-scheme" content="light dark">
-<meta name="theme-color" media="(prefers-color-scheme: light)" content="#0b4a8b">
-<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#102c49">
+<meta name="color-scheme" content="only light">
+<meta name="theme-color" content="#0b4a8b">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
 <title>PhD defense of Alp Altunkaya: your times</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='6' width='28' height='20' rx='4' fill='%230b4a8b'/%3E%3Crect x='9' y='11' width='14' height='10' rx='2' fill='%23fff'/%3E%3C/svg%3E">
@@ -19,16 +18,7 @@
   --o1:#86b6ef; --o2:#3483e0; --o3:#16509c; --o4:#06234b; --all:#eb6834;   /* overlap: four steps, then everyone */
   --edge:#7b8794; --hour:rgb(20 32 43 / .38); --quarter:rgb(20 32 43 / .12); --on-line:rgb(255 255 255 / .28);
   --radius:6px; --left:150px; --mid:268px;
-  color-scheme:light dark;
-}
-@media (prefers-color-scheme:dark){
-  :root{
-    --band:#102c49; --band-ink:#f2f6fa; --band-soft:#b9cbe0;
-    --bg:#10161d; --field:#1a232d; --ink:#e8eef4; --muted:#a2b0bf;
-    --accent:#78b4f0; --accent-ink:#07182a; --danger:#f09a8c; --ok:#86d3a4;
-    --o1:#184f95; --o2:#3987e5; --o3:#86b6ef; --o4:#cde2fb; --all:#d95926;
-    --edge:#7f8e9e; --hour:rgb(232 238 244 / .4); --quarter:rgb(232 238 244 / .12); --on-line:rgb(7 24 42 / .22);
-  }
+  color-scheme:only light;   /* light on every device, also when the device is dark */
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -209,6 +199,8 @@ main:not(.shared){padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
       <h2 id="allTitle">Everyone’s times</h2>
       <p class="fits-title" id="fitsTitle">Everyone who answered can attend:</p>
       <ul class="fits" id="fits"></ul>
+      <p class="fits-title" id="foursTitle" hidden>4 of the 5 can attend:</p>
+      <ul class="fits" id="fours"></ul>
       <p class="answered" id="answered">Loading answers…</p>
       <p class="rule">At least 4 of the 5 examiners are needed.</p>
       <p class="key" id="key"></p>
@@ -577,6 +569,19 @@ function showEveryone() {
 function commonTimes(list, id) {
   return blankDays()[id].map(function (zero, i) { return list.length && list.every(function (e) { return e.days[id][i]; }) ? 1 : zero; });
 }
+/* Times for exactly NEED people when more answered, so none repeats the everyone list.
+   A new time starts where the group changes: the same people can stay for each whole time. */
+function fourTimes(list, id) {
+  var out = [], s = 0, was = "";
+  for (var i = 0; i <= N; i++) {
+    var who = i < N && list.length > NEED ? list.map(function (e) { return e.days[id][i]; }).join("") : "";
+    if (who.split("1").length - 1 !== NEED) who = "";
+    if (who === was) continue;
+    if (was) out.push(s === 0 && i === N ? "All day" : span(s, i));
+    s = i; was = who;
+  }
+  return out.join(", ");
+}
 function levelOf(k, n) { return !k ? "" : k === n ? "all" : String(Math.min(k, STEPS)); }
 function drawKey(n) {
   var box = $("key"), steps = Math.min(n - 1, STEPS), part = el("span"), i;
@@ -611,6 +616,12 @@ function renderAll() {
     if (!listed) fits.appendChild(el("li", {text: "No time works for everyone who answered so far."}));
   }
   $("fitsTitle").hidden = !listed;
+  var fours = $("fours"); fours.textContent = "";
+  if (n <= EXAMINERS) DAYS.forEach(function (d) {
+    var times = fourTimes(entries, d.id);
+    if (times) fours.appendChild(el("li", {text: d.label + ": " + times}));
+  });
+  fours.hidden = $("foursTitle").hidden = !fours.children.length;
   drawKey(n);
 
   var all = $("allDays"); all.textContent = "";
