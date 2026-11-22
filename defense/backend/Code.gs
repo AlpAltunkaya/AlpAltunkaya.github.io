@@ -123,8 +123,8 @@ function t_(i) {
   return Math.floor(m / 60) + ':' + (mm < 10 ? '0' : '') + mm;
 }
 
-// Text that starts like a formula is stored as plain text.
-function safe_(s) { return /^[=+\-@]/.test(s) ? "'" + s : s; }
+// Typed text is stored as plain text, so Sheets never turns it into a date, number or formula.
+function safe_(s) { return s ? "'" + s : s; }
 
 function unsafe_(s) { s = String(s); return /^'[=+\-@]/.test(s) ? s.slice(1) : s; }
 
