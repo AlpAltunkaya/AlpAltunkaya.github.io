@@ -701,11 +701,15 @@ function demoStop(why) {
    A key counts when it moves focus or goes into a field. Keys that scroll are caught as a scroll. */
 function demoInput(e) {
   if (e.isTrusted === false) return;
+  if (e.target && e.target.closest && e.target.closest("#nameForm")) return;   /* typing the name lets it play on */
   var onPage = e.target && e.target !== document.body && e.target !== document.documentElement && e.target !== document;
   if (e.type === "keydown" && !onPage && e.key !== "Tab" && e.key !== "Escape") return;
   demoStop("stopped by " + e.type);
 }
-function demoScroll() { if (Math.abs(window.scrollY - demoY) > DEMO_SCROLL_PX) demoStop("stopped by scroll"); }
+function demoScroll() {
+  if (document.activeElement === nameInput) { demoY = window.scrollY; return; }   /* a phone keyboard opening for the name */
+  if (Math.abs(window.scrollY - demoY) > DEMO_SCROLL_PX) demoStop("stopped by scroll");
+}
 function demoSoon() {
   if (demoState !== "waiting") return;
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) { demoStop("skipped: the device asks for reduced motion"); return; }
