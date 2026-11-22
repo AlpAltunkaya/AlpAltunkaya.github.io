@@ -39,12 +39,11 @@ button{touch-action:manipulation;cursor:pointer;-webkit-user-select:none;user-se
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .wrap{max-width:1264px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 
-/* header: the question and the name */
+/* header: the place and the name */
 header{background:var(--band);color:var(--band-ink);padding:24px 0}
 .top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px 48px}
-h1 .nw{white-space:nowrap}
-h1{margin:0 0 6px;max-width:23em;font-size:1.75rem;line-height:1.2;text-wrap:balance}
-.place{margin:0;color:var(--band-soft)}
+h1{margin:0 0 6px;max-width:23em;font-size:1.5rem;line-height:1.2;text-wrap:balance}
+.zone{margin:0;color:var(--band-soft)}
 .who{flex:0 1 360px;min-width:min(100%,280px)}
 .who label{display:block;font-weight:600;margin-bottom:6px}
 .who input{width:100%;min-height:48px;padding:10px 12px;border:1px solid var(--edge);border-radius:var(--radius);background:var(--bg);color:var(--ink);caret-color:var(--accent)}
@@ -142,7 +141,7 @@ h1{margin:0 0 6px;max-width:23em;font-size:1.75rem;line-height:1.2;text-wrap:bal
 /* phone: morning and afternoon on their own lines */
 @media (max-width:639px){
   header{padding:20px 0}
-  h1{font-size:1.5rem}
+  h1{font-size:1.25rem}
   .who{flex-basis:100%}
   .day{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "picks" "track" "sum";padding:8px 0}
   .track{display:block}
@@ -168,8 +167,8 @@ h1{margin:0 0 6px;max-width:23em;font-size:1.75rem;line-height:1.2;text-wrap:bal
 <header>
   <div class="wrap top">
     <div>
-      <h1>When can you attend <span class="nw">Alp Altunkaya’s</span> PhD defense?</h1>
-      <p class="place">LMU Biozentrum Martinsried, Munich time</p>
+      <h1>LMU Biozentrum Martinsried</h1>
+      <p class="zone">Munich time</p>
       <p class="banner" id="demoBanner" hidden>Test mode. Nothing is sent.</p>
     </div>
     <form class="who" id="nameForm">
