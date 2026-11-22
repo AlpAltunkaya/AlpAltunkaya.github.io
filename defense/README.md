@@ -8,7 +8,9 @@ see everyone's overlap.
   and stores nothing in the browser.
 - Days: Thu 17 Dec 2026, Fri 18 Dec 2026, Tue 5 Jan, Thu 7 Jan, Fri 8 Jan 2027,
   8:00 to 18:00 Munich time, one row per day. Tap "All day", 10 to 12, 13 to 15 or
-  14 to 16, or drag along the row for exact times.
+  14 to 16, or drag along the row for exact times. "Can't attend" marks a day as not
+  possible. It saves as a day without times, and a loaded answer shows such days as
+  "Can't attend".
 - "Everyone's times" stays hidden until the person has saved, or has loaded a saved
   answer by name. It lists first every time, however short, that everyone who
   answered can attend, one line per day. Once five have answered, a second list gives
@@ -19,8 +21,12 @@ see everyone's overlap.
   5 names it lists no time and asks for a check for a double entry.
 - The page is always light, also on a device in dark mode.
 - On opening, a ghost pointer shows the hold and drag once on the first day (about
-  2.5 seconds). It marks nothing, ends at the first input, and stays off when the
-  device asks for reduced motion.
+  2.5 seconds). It marks nothing, plays on while the name is typed, ends at the first
+  other press or scroll, and stays off when the device asks for reduced motion.
+- A returning name is found again despite case, spaces, punctuation, accents, umlaut
+  spellings (ö or oe), titles (Prof., Dr., PD), word order and small typos. It only
+  matches when exactly one saved name fits best, and the answer is then saved under
+  the stored name.
 - Hiding the section is not access control: the answer store is readable by anyone
   with the link, and the name field offers the saved names.
 - The same name loads and changes an earlier answer. Before a save the page reads the
