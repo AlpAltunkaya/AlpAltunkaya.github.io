@@ -122,7 +122,6 @@ h1{margin:0 0 6px;max-width:23em;font-size:1.5rem;line-height:1.2;text-wrap:bala
 main:not(.shared){padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 
 /* save bar */
-#mineDays[inert]{opacity:.5}
 .bar{position:fixed;z-index:3;left:0;right:0;bottom:0;padding:10px 0 calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--hour)}
 .bar .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .state{min-width:0;line-height:1.25;font-size:.9375rem}
@@ -344,7 +343,7 @@ function refresh() {
       adopt(me.name, findEntry(me.name));
       say("Your saved times were updated.");
     }
-    if (first) { say(""); if (nameInput.value.trim() && document.activeElement !== nameInput) commitName(); demoSoon(); }
+    if (first) { say(""); if (nameInput.value.trim() && document.activeElement !== nameInput) commitName(); }
   }).catch(function () {
     if (loaded || seq !== saveSeq) return;
     $("answered").textContent = "Answers could not be loaded.";
@@ -685,26 +684,32 @@ $("allDays").addEventListener("click", function (e) {
 
 /* ---------- demo on opening ---------- */
 /* Once per visit, a ghost pointer presses, holds and drags over 10:00 to 12:00 on the first day.
-   It only draws. It never touches the answer, and the first input ends it. */
-var DEMO_WAIT = 1000, DEMO_MS = 2500, DEMO_HOLD = 800, DEMO_DRAG_END = 2000, DEMO_MOVE_PX = 16;
-var demoState = "waiting", demoBox = null, demoTimer = 0, demoFrame = 0, demoFrom = null;
-var demoInputs = ["pointerdown", "touchstart", "wheel", "keydown", "input", "change", "scroll"];
-function demoStop() {
-  demoState = "over";
+   It only draws. It never touches the answer. It starts with the page, not after the answers load,
+   and only a real press, touch, key, wheel or scroll by the person ends it. */
+var DEMO_WAIT = 1000, DEMO_MS = 2500, DEMO_HOLD = 800, DEMO_DRAG_END = 2000, DEMO_SCROLL_PX = 4;
+var demoState = "waiting", demoWhy = "", demoBox = null, demoTimer = 0, demoFrame = 0, demoY = 0;
+var demoInputs = ["pointerdown", "touchstart", "wheel", "keydown"];
+function demoStop(why) {
+  if (demoState === "over") return;
+  demoState = "over"; demoWhy = why || "";
   clearTimeout(demoTimer); cancelAnimationFrame(demoFrame);
   if (demoBox) { demoBox.remove(); demoBox = null; }
-  demoInputs.forEach(function (t) { window.removeEventListener(t, demoStop, true); });
-  window.removeEventListener("pointermove", demoMoved, true);
+  demoInputs.forEach(function (t) { window.removeEventListener(t, demoInput, true); });
+  window.removeEventListener("scroll", demoScroll, true);
 }
-/* a resting hand shakes a little, so only a real move of the mouse ends a running demo */
-function demoMoved(e) {
-  if (demoState !== "playing") return;
-  if (!demoFrom) demoFrom = {x: e.clientX, y: e.clientY};
-  else if (Math.abs(e.clientX - demoFrom.x) + Math.abs(e.clientY - demoFrom.y) > DEMO_MOVE_PX) demoStop();
+/* only what the person does on this page counts, never an event the page or the browser makes up.
+   A key counts when it moves focus or goes into a field. Keys that scroll are caught as a scroll. */
+function demoInput(e) {
+  if (e.isTrusted === false) return;
+  var onPage = e.target && e.target !== document.body && e.target !== document.documentElement && e.target !== document;
+  if (e.type === "keydown" && !onPage && e.key !== "Tab" && e.key !== "Escape") return;
+  demoStop("stopped by " + e.type);
 }
+function demoScroll() { if (Math.abs(window.scrollY - demoY) > DEMO_SCROLL_PX) demoStop("stopped by scroll"); }
 function demoSoon() {
   if (demoState !== "waiting") return;
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { demoStop(); return; }
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { demoStop("skipped: the device asks for reduced motion"); return; }
+  demoY = window.scrollY;
   clearTimeout(demoTimer);
   demoTimer = setTimeout(demoPlay, DEMO_WAIT);
 }
@@ -723,13 +728,13 @@ function demoBuild() {
 function demoPlay() {
   if (demoState !== "waiting" || document.visibilityState !== "visible") return;
   var r = rows[DAYS[0].id].halves[0].getBoundingClientRect();
-  if (r.top < 0 || r.bottom > document.querySelector(".bar").getBoundingClientRect().top) { demoStop(); return; }
+  if (r.top < 0 || r.bottom > document.querySelector(".bar").getBoundingClientRect().top) { demoStop("skipped: the first day is not on screen"); return; }
   demoState = "playing";
   demoBuild();
   var began = performance.now();
   (function next() {
     var t = performance.now() - began;
-    if (t >= DEMO_MS) { demoStop(); return; }
+    if (t >= DEMO_MS) { demoStop("played"); return; }
     demoPaint(t);
     demoFrame = requestAnimationFrame(next);
   })();
@@ -751,11 +756,12 @@ function demoPaint(t) {
   part[2].style.left = Math.max(half, Math.min(box.width - half, x)) + "px"; part[2].style.top = top + "px";
   part[3].style.left = x + "px"; part[3].style.top = y + "px";
 }
-demoInputs.forEach(function (t) { window.addEventListener(t, demoStop, {capture: true, passive: true}); });
-window.addEventListener("pointermove", demoMoved, {capture: true, passive: true});
+demoInputs.forEach(function (t) { window.addEventListener(t, demoInput, {capture: true, passive: true}); });
+window.addEventListener("scroll", demoScroll, {capture: true, passive: true});
+/* a page opened in the background plays its demo once it is shown */
 document.addEventListener("visibilitychange", function () {
-  if (document.visibilityState !== "visible") { if (demoState === "playing") demoStop(); }
-  else if (loaded) demoSoon();
+  if (document.visibilityState !== "visible") { if (demoState === "playing") demoStop("stopped: the page was hidden"); }
+  else demoSoon();
 });
 
 /* ---------- save ---------- */
@@ -816,6 +822,7 @@ $("mineDays").addEventListener("pointerdown", function () {
 window.addEventListener("scroll", function () { lastScroll = Date.now(); }, {passive: true});
 if (demo) $("demoBanner").hidden = false;
 buildMine(); paintMine();
+demoSoon();
 refresh();
 setInterval(function () { if (document.visibilityState === "visible" && !saving) refresh(); }, POLL_MS);
 document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible" && !saving) refresh(); });
