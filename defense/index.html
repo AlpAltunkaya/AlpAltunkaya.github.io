@@ -117,8 +117,13 @@ h1{margin:0 0 6px;max-width:23em;font-size:1.5rem;line-height:1.2;text-wrap:bala
 .run.split{border-left-width:3px}
 .run.sel{outline:3px solid var(--ink);outline-offset:-3px;box-shadow:inset 0 0 0 5px var(--bg)}
 .detail{grid-area:detail;font-size:.8125rem;overflow-wrap:anywhere}
-.notes{margin-top:16px}
-.notes p{margin-top:6px}
+.notes,.people{margin-top:16px}
+.notes p,.people p{margin-top:6px}
+/* Alp's own results view, opened with #results at the end of the link: everyone's times only */
+body:not(.results) .people,body:not(.results) #best,body:not(.results) #bestTitle{display:none}
+body.results{background:var(--field);min-height:100vh}
+body.results .who,body.results .mine,body.results .bar{display:none}
+body.results .everyone{padding-bottom:32px}
 .fine{margin:0 0 20px;font-size:.8125rem}
 main:not(.shared){padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 
@@ -206,14 +211,17 @@ main:not(.shared){padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
   <section class="everyone" id="everyone" aria-labelledby="allTitle" hidden>
     <div class="wrap">
       <h2 id="allTitle">Everyone’s times</h2>
-      <p class="fits-title" id="fitsTitle">Everyone who answered can attend:</p>
+      <p class="fits-title" id="fitsTitle" hidden>Everyone who answered can attend:</p>
       <ul class="fits" id="fits"></ul>
+      <p class="fits-title" id="bestTitle" hidden></p>
+      <ul class="fits" id="best"></ul>
       <p class="fits-title" id="foursTitle" hidden>4 of the 5 can attend:</p>
       <ul class="fits" id="fours"></ul>
       <p class="answered" id="answered">Loading answers…</p>
       <p class="rule">At least 4 of the 5 examiners are needed.</p>
       <p class="key" id="key"></p>
       <div id="allDays"></div>
+      <div class="people" id="people"></div>
       <div class="notes" id="notes"></div>
     </div>
   </section>
@@ -264,6 +272,7 @@ var loaded = false;            /* until true, nothing is marked or saved, so no 
 var storeBase = baseline;      /* the stored answer this tab started from. The store may reformat a note. */
 var lastSent = null, dragging = false, swallow = false, lastScroll = 0;
 var savedHere = false;         /* the person at the page has a saved answer, so everyone's times show */
+var resultsView = false;       /* Alp's view of all answers, opened with #results */
 var saving = false, saveSeq = 0, shownSig = "", selected = null, fixAction = null;
 
 function blankDays() { var o = {}; DAYS.forEach(function (d) { o[d.id] = new Array(N).fill(0); }); return o; }
@@ -637,7 +646,7 @@ function attachKeys(track, id) {
 /* ---------- everyone ---------- */
 /* Hidden until this person has saved. Returns true when it has just opened. */
 function showEveryone() {
-  var box = $("everyone"), show = savedHere && !!findEntry(me.name), opened = show && box.hidden;
+  var box = $("everyone"), show = resultsView || (savedHere && !!findEntry(me.name)), opened = show && box.hidden;
   box.hidden = !show;
   box.parentNode.classList.toggle("shared", show);
   return opened;
@@ -693,6 +702,22 @@ function renderAll() {
     if (!listed) fits.appendChild(el("li", {text: "No time works for everyone who answered so far."}));
   }
   $("fitsTitle").hidden = !listed;
+  /* results view: when nobody's time fits everyone, the times that suit the most people, with their names */
+  var best = $("best"), most = 0; best.textContent = "";
+  if (n > 1 && n <= EXAMINERS) DAYS.forEach(function (d) { for (var i = 0; i < N; i++) most = Math.max(most, whoAt(d.id, i).split("1").length - 1); });
+  if (most > 1 && most < n) DAYS.forEach(function (d) {
+    for (var i = 0; i < N; i++) {
+      var who = whoAt(d.id, i);
+      if (who.split("1").length - 1 !== most) continue;
+      var b = i + 1;
+      while (b < N && whoAt(d.id, b) === who) b++;
+      var names = entries.filter(function (e) { return e.days[d.id][i]; }).map(function (e) { return e.name; });
+      best.appendChild(el("li", {text: d.label + ": " + (i === 0 && b === N ? "All day" : span(i, b)) + " (" + names.join(", ") + ")"}));
+      i = b - 1;
+    }
+  });
+  $("bestTitle").textContent = most + " of the " + n + " who answered can attend:";
+  $("bestTitle").hidden = !best.children.length;
   var fours = $("fours"); fours.textContent = "";
   if (n <= EXAMINERS) DAYS.forEach(function (d) {
     var times = fourTimes(entries, d.id);
@@ -707,6 +732,12 @@ function renderAll() {
     DAYS.forEach(function (d) { all.appendChild(overlapRow(d, n)); });
   }
   showSelected();
+
+  var people = $("people"); people.textContent = "";
+  entries.forEach(function (e) {
+    var parts = DAYS.map(function (d) { var t = rangeText(e.days[d.id]); return t ? d.label.replace(/ \d{4}$/, "") + ", " + t : ""; }).filter(Boolean);
+    people.appendChild(el("p", {}, [el("strong", {text: e.name + ": "}), document.createTextNode(parts.join(" · ") || "Can't attend any day")]));
+  });
 
   var notes = $("notes"); notes.textContent = "";
   entries.forEach(function (e) {
@@ -782,6 +813,7 @@ function demoScroll() {
 }
 function demoSoon() {
   if (demoState !== "waiting") return;
+  if (resultsView) { demoStop("skipped: results view"); return; }
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) { demoStop("skipped: the device asks for reduced motion"); return; }
   demoY = window.scrollY;
   clearTimeout(demoTimer);
@@ -895,6 +927,17 @@ $("mineDays").addEventListener("pointerdown", function () {
 }, true);
 window.addEventListener("scroll", function () { lastScroll = Date.now(); }, {passive: true});
 if (demo) $("demoBanner").hidden = false;
+/* Alp's results view: the same page with #results at the end of the link shows everyone's
+   answers at once, with no name and no save bar. Nothing on the page links to it. */
+function setView() {
+  resultsView = location.hash === "#results";
+  document.body.classList.toggle("results", resultsView);
+  $("allTitle").textContent = resultsView ? "Answers so far" : "Everyone’s times";
+  if (resultsView) demoStop("skipped: results view");
+  showEveryone();
+}
+window.addEventListener("hashchange", setView);
+setView();
 buildMine(); paintMine();
 demoSoon();
 refresh();
