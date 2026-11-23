@@ -11,9 +11,9 @@
  */
 
 var DAYS = ['2026-12-17', '2026-12-18', '2027-01-05', '2027-01-07', '2027-01-08',
-            '2027-01-11', '2027-01-12', '2027-01-13', '2027-01-14', '2027-01-15'];
+            '2027-01-09', '2027-01-11', '2027-01-12', '2027-01-13', '2027-01-14', '2027-01-15'];
 var DAY_LABELS = ['Thu 17 Dec', 'Fri 18 Dec', 'Tue 5 Jan', 'Thu 7 Jan', 'Fri 8 Jan',
-                  'Mon 11 Jan', 'Tue 12 Jan', 'Wed 13 Jan', 'Thu 14 Jan', 'Fri 15 Jan'];
+                  'Sat 9 Jan', 'Mon 11 Jan', 'Tue 12 Jan', 'Wed 13 Jan', 'Thu 14 Jan', 'Fri 15 Jan'];
 // Sheet layout: Name, Key, Updated, Note, the first FIRST_DAYS days, Raw, then the later days.
 // Raw stays in column 10, so rows saved before the January days were added read the same.
 var FIRST_DAYS = 5;
