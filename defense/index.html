@@ -245,7 +245,12 @@ var DAYS = [
   {id:"2026-12-18", label:"Fri 18 Dec 2026", long:"Friday 18 December 2026"},
   {id:"2027-01-05", label:"Tue 5 Jan 2027",  long:"Tuesday 5 January 2027"},
   {id:"2027-01-07", label:"Thu 7 Jan 2027",  long:"Thursday 7 January 2027"},
-  {id:"2027-01-08", label:"Fri 8 Jan 2027",  long:"Friday 8 January 2027"}
+  {id:"2027-01-08", label:"Fri 8 Jan 2027",  long:"Friday 8 January 2027"},
+  {id:"2027-01-11", label:"Mon 11 Jan 2027", long:"Monday 11 January 2027"},
+  {id:"2027-01-12", label:"Tue 12 Jan 2027", long:"Tuesday 12 January 2027"},
+  {id:"2027-01-13", label:"Wed 13 Jan 2027", long:"Wednesday 13 January 2027"},
+  {id:"2027-01-14", label:"Thu 14 Jan 2027", long:"Thursday 14 January 2027"},
+  {id:"2027-01-15", label:"Fri 15 Jan 2027", long:"Friday 15 January 2027"}
 ];
 var START_MIN = 8 * 60, STEP = 15, N = 40, HALF = 20;  /* 8:00 to 18:00 in 15 minute steps */
 var PICKS = [                                          /* whole day, then the suggested times */
@@ -372,8 +377,9 @@ function checkMark() {
 /* ---------- store ---------- */
 function normalize(list) {
   return (Array.isArray(list) ? list : []).filter(function (e) { return e && typeof e.name === "string" && e.name.trim(); }).map(function (e) {
-    var days = {}; DAYS.forEach(function (d) { days[d.id] = dec(e.days && e.days[d.id]); });
-    return {name: e.name.trim().slice(0, 60), days: days, note: typeof e.note === "string" ? e.note.slice(0, 500) : ""};
+    var days = {}, seen = {};   /* seen: days this answer covers. Days added later are open, not "Can't attend". */
+    DAYS.forEach(function (d) { days[d.id] = dec(e.days && e.days[d.id]); seen[d.id] = !!e.days && typeof e.days[d.id] === "string"; });
+    return {name: e.name.trim().slice(0, 60), days: days, seen: seen, note: typeof e.note === "string" ? e.note.slice(0, 500) : ""};
   });
 }
 function request(url, opts) {
@@ -433,7 +439,7 @@ function adopt(name, found) {
   me = {name: found ? found.name : name, days: blankDays(), note: found ? found.note : ""};
   if (found) DAYS.forEach(function (d) { me.days[d.id] = found.days[d.id].slice(); });
   /* a saved answer shows each day without times as "Can't attend" */
-  DAYS.forEach(function (d) { cant[d.id] = !!found && !me.days[d.id].some(function (x) { return x; }); });
+  DAYS.forEach(function (d) { cant[d.id] = !!found && !!found.seen && found.seen[d.id] && !me.days[d.id].some(function (x) { return x; }); });
   cantTouched = false;
   baseline = storeBase = answerOf(me);
   lastSent = null;
@@ -736,7 +742,10 @@ function renderAll() {
   var people = $("people"); people.textContent = "";
   entries.forEach(function (e) {
     var parts = DAYS.map(function (d) { var t = rangeText(e.days[d.id]); return t ? d.label.replace(/ \d{4}$/, "") + ", " + t : ""; }).filter(Boolean);
-    people.appendChild(el("p", {}, [el("strong", {text: e.name + ": "}), document.createTextNode(parts.join(" · ") || "Can't attend any day")]));
+    var open = DAYS.filter(function (d) { return e.seen && !e.seen[d.id]; }).length;
+    var text = parts.join(" · ") || (open ? "" : "Can't attend any day");
+    if (open) text += (text ? " · " : "") + "not answered yet for " + open + " new " + (open === 1 ? "day" : "days");
+    people.appendChild(el("p", {}, [el("strong", {text: e.name + ": "}), document.createTextNode(text)]));
   });
 
   var notes = $("notes"); notes.textContent = "";
