@@ -10,8 +10,14 @@
  * Who has access: Anyone. Paste the /exec URL into API_URL in index.html.
  */
 
-var DAYS = ['2026-12-17', '2026-12-18', '2027-01-05', '2027-01-07', '2027-01-08'];
-var DAY_LABELS = ['Thu 17 Dec', 'Fri 18 Dec', 'Tue 5 Jan', 'Thu 7 Jan', 'Fri 8 Jan'];
+var DAYS = ['2026-12-17', '2026-12-18', '2027-01-05', '2027-01-07', '2027-01-08',
+            '2027-01-11', '2027-01-12', '2027-01-13', '2027-01-14', '2027-01-15'];
+var DAY_LABELS = ['Thu 17 Dec', 'Fri 18 Dec', 'Tue 5 Jan', 'Thu 7 Jan', 'Fri 8 Jan',
+                  'Mon 11 Jan', 'Tue 12 Jan', 'Wed 13 Jan', 'Thu 14 Jan', 'Fri 15 Jan'];
+// Sheet layout: Name, Key, Updated, Note, the first FIRST_DAYS days, Raw, then the later days.
+// Raw stays in column 10, so rows saved before the January days were added read the same.
+var FIRST_DAYS = 5;
+var RAW_COL = 4 + FIRST_DAYS + 1;
 var N = 40;                 // 8:00 to 18:00 in 15 minute steps
 var MAX_ENTRIES = 40;       // guard against junk
 var NOTIFY = true;          // mail Alp on every save
@@ -55,9 +61,11 @@ function doPost(e) {
     var row = keys.indexOf(key);
     if (row < 0 && keys.length >= MAX_ENTRIES) return json_({ok: false, error: 'full'});
     var now = Utilities.formatDate(new Date(), 'Europe/Berlin', 'yyyy-MM-dd HH:mm');
+    var shown = DAYS.map(function (d) { return readable_(days[d]); });
     var values = [safe_(name), safe_(key), now, safe_(note)]
-      .concat(DAYS.map(function (d) { return readable_(days[d]); }))
-      .concat([JSON.stringify(days)]);
+      .concat(shown.slice(0, FIRST_DAYS))
+      .concat([JSON.stringify(days)])
+      .concat(shown.slice(FIRST_DAYS));
     if (row < 0) sh.appendRow(values);
     else sh.getRange(row + 2, 1, 1, values.length).setValues([values]);
     SpreadsheetApp.flush();
@@ -81,10 +89,9 @@ function readAll_() {
   var sh = sheet_();
   var last = sh.getLastRow();
   if (last < 2) return [];
-  var width = 4 + DAYS.length + 1;
-  return sh.getRange(2, 1, last - 1, width).getValues().map(function (r) {
-    var days = {};
-    try { days = JSON.parse(r[width - 1]); } catch (err) {}
+  return sh.getRange(2, 1, last - 1, RAW_COL).getValues().map(function (r) {
+    var days = {};   // a day missing here was not on the page when this answer was saved
+    try { days = JSON.parse(r[RAW_COL - 1]); } catch (err) {}
     return {name: unsafe_(r[0]), updated: String(r[2]), note: unsafe_(r[3]), days: days};
   }).filter(function (x) { return x.name; });
 }
@@ -99,11 +106,23 @@ function sheet_() {
     props.setProperty('SHEET_ID', ss.getId());
     var first = ss.getSheets()[0];
     first.setName(SHEET_NAME);
-    first.appendRow(['Name', 'Key', 'Updated (Munich)', 'Note'].concat(DAY_LABELS).concat(['Raw']));
+    first.getRange(1, 1, 1, RAW_COL).setNumberFormat('@')
+      .setValues([['Name', 'Key', 'Updated (Munich)', 'Note'].concat(DAY_LABELS.slice(0, FIRST_DAYS)).concat(['Raw'])]);
     first.setFrozenRows(1);
-    first.getRange(1, 1, 1, 4 + DAYS.length + 1).setFontWeight('bold');
+    first.getRange(1, 1, 1, RAW_COL).setFontWeight('bold');
   }
-  return ss.getSheetByName(SHEET_NAME);
+  var sh = ss.getSheetByName(SHEET_NAME);
+  laterHeads_(sh);
+  return sh;
+}
+
+/** Writes the labels of the later days after Raw, once. Writing the same labels twice is harmless. */
+function laterHeads_(sh) {
+  var later = DAY_LABELS.slice(FIRST_DAYS);
+  if (!later.length) return;
+  var head = sh.getRange(1, RAW_COL + 1, 1, later.length);
+  if (head.getDisplayValues()[0].join('|') === later.join('|')) return;
+  head.setNumberFormat('@').setValues([later]).setFontWeight('bold');
 }
 
 function readable_(bits) {
